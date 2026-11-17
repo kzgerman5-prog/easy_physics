@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rigid Body Dynamics — Visual & Interactive Lab</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0f19;
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Custom sleek range slider */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: #38bdf8;
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: #1e293b;
+            border-radius: 999px;
+        }
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            background: radial-gradient(circle at center, #131c31 0%, #090d16 100%);
+            border-radius: 1rem;
+            border: 1px solid #1e293b;
+            overflow: hidden;
+        }
+        @media (min-width: 768px) {
+            .canvas-container {
+                height: 460px;
+            }
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b0f19;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Top Header -->
+    <header class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-400 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="9" stroke-dasharray="4 2"></circle>
+                        <circle cx="12" cy="12" r="2.5" fill="currentColor"></circle>
+                        <path d="M12 3v3M12 18v3M3 12h3M18 12h3"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="font-bold text-base sm:text-lg tracking-tight text-white">Rigid Body Dynamics</h1>
+                    <p class="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Interactive Visual Sandbox • No Text Walls</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                    <span class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
+                    Live Physics Engine
+                </span>
+            </div>
+        </div>
+
+        <!-- Module Navigation Tabs -->
+        <nav class="max-w-7xl mx-auto px-4 overflow-x-auto no-scrollbar">
+            <div class="flex space-x-2 py-2.5" id="nav-tabs">
+                <!-- Tabs injected by JS -->
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Interactive Workspace -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Left/Top: Interactive Simulation Stage (8 Cols on Desktop) -->
+        <div class="lg:col-span-8 flex flex-col gap-4">
+            <div class="canvas-container shadow-2xl" id="stage-wrapper">
+                <canvas id="simCanvas"></canvas>
+                
+                <!-- Floating Legend Overlay inside Canvas -->
+                <div id="vector-legend" class="absolute top-3 left-3 flex flex-wrap gap-2 pointer-events-none">
+                    <!-- Dynamic vector badges -->
+                </div>
+
+                <!-- Interactive Hint Badge -->
+                <div id="interaction-hint" class="absolute bottom-3 right-3 px-3 py-1.5 rounded-lg bg-slate-900/80 backdrop-blur border border-slate-700/60 text-xs text-slate-300 pointer-events-none flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
+                    <span id="hint-text">Adjust sliders to see live forces & motion</span>
+                </div>
+            </div>
+
+            <!-- Live Equation & Visual Telemetry Strip -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" id="telemetry-cards">
+                <!-- Dynamic live formula & metric cards -->
+            </div>
+        </div>
+
+        <!-- Right/Bottom: Tactile Controls & Challenge Mode (4 Cols on Desktop) -->
+        <div class="lg:col-span-4 flex flex-col gap-4">
+            <!-- Control Deck -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 id="module-title" class="text-lg font-bold text-white">Module Title</h2>
+                    <button id="reset-btn" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition flex items-center gap-1">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        Reset
+                    </button>
+                </div>
+
+                <!-- Dynamic Controls Container -->
+                <div id="controls-container" class="space-y-4">
+                    <!-- Sliders & Toggles injected here -->
+                </div>
+            </div>
+
+            <!-- Interactive Micro-Challenge (Learn by Doing, Zero Reading) -->
+            <div class="bg-gradient-to-br from-indigo-950/60 to-slate-900 border border-indigo-500/30 rounded-2xl p-5 shadow-xl">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        Interactive Goal
+                    </span>
+                    <span id="goal-status" class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">In Progress</span>
+                </div>
+                <p id="goal-prompt" class="text-sm font-medium text-slate-200 leading-snug">
+                    Goal description goes here.
+                </p>
+                <div class="mt-3 w-full bg-slate-800/80 h-2 rounded-full overflow-hidden">
+                    <div id="goal-progress" class="bg-emerald-400 h-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        /**
+         * RIGID BODY DYNAMICS — INTERACTIVE VISUAL ENGINE
+         * Covers every concept in Module 5 (BAPHY101 / Engineering Mechanics):
+         * 1. Curvilinear n-t Kinematics (v, a_t, a_n = v^2/rho, radius of curvature)
+         * 2. Planar Motion Types (Rectilinear, Curvilinear Translation, Fixed-Axis Rotation, General Plane Motion)
+         * 3. Fixed-Axis Rotation & Belt Drive (omega, alpha, v = r*omega, a_t = r*alpha, a_n = omega^2*r)
+         * 4. Relative Velocity & Instantaneous Center (v_B = v_A + omega x r_B/A, Slotted Link & IC)
+         * 5. Mass Moment of Inertia & Parallel Axis Theorem (I_G, I_P = I_G + m*d^2, Radius of Gyration k)
+         * 6. Kinetics: Slide vs. Tip & Pendulum Beam (Sum F = m*a_G, Sum M_G = I_G*alpha)
+         * 7. Work, Energy & Rolling Without Slipping (T = 1/2 m v_G^2 + 1/2 I_G omega^2, Spring & Couple Work)
+         */
+
+        const MODULES = [
+            {
+                id: 'curvilinear',
+                shortTitle: '1. Curvilinear (n-t)',
+                title: 'Curvilinear n-t Components',
+                hint: 'Watch how a_n points to center of curvature O\' and grows with v²/ρ',
+                goal: 'Make normal acceleration (aₙ) exceed 15 m/s² by boosting speed or tightening the curve!',
+                legend: [
+                    { color: '#38bdf8', label: 'Velocity (v = v uₜ)' },
+                    { color: '#34d399', label: 'Tangential (aₜ = dv/dt)' },
+                    { color: '#f43f5e', label: 'Normal (aₙ = v²/ρ)' },
+                    { color: '#fbbf24', label: 'Total Accel (a)' }
+                ],
+                state: { s: 0.2, speed: 4.5, at: 1.5, curveAmp: 90, paused: false },
+                controls: [
+                    { type: 'slider', key: 'speed', label: 'Initial Speed (v₀)', min: 1, max: 10, step: 0.5, unit: 'm/s' },
+                    { type: 'slider', key: 'at', label: 'Tangential Accel (aₜ)', min: -3, max: 4, step: 0.5, unit: 'm/s²' },
+                    { type: 'slider', key: 'curveAmp', label: 'Path Sharpness (1/ρ)', min: 20, max: 140, step: 5, unit: '%' },
+                    { type: 'toggle', key: 'paused', label: 'Pause Motion' }
+                ]
+            },
+            {
+                id: 'motionTypes',
+                shortTitle: '2. Motion Classification',
+                title: 'Types of Rigid Body Motion',
+                hint: 'Compare line AB orientation & trajectories across all 4 planar motion modes',
+                goal: 'Switch to "General Plane Motion" and observe how line AB both translates AND rotates!',
+                legend: [
+                    { color: '#38bdf8', label: 'Point A Path' },
+                    { color: '#f472b6', label: 'Point B Path' },
+                    { color: '#facc15', label: 'Orientation Line AB' }
+                ],
+                state: { mode: 'general', speed: 1.2, t: 0 },
+                controls: [
+                    {
+                        type: 'select', key: 'mode', label: 'Motion Classification',
+                        options: [
+                            { value: 'rectilinear', label: 'Rectilinear Translation (ω = 0)' },
+                            { value: 'curvilinear', label: 'Curvilinear Translation (ω = 0)' },
+                            { value: 'rotation', label: 'Rotation About Fixed Axis' },
+                            { value: 'general', label: 'General Plane Motion (Trans + Rot)' }
+                        ]
+                    },
+                    { type: 'slider', key: 'speed', label: 'Animation Speed', min: 0.2, max: 2.5, step: 0.1, unit: 'x' }
+                ]
+            },
+            {
+                id: 'fixedRotation',
+                shortTitle: '3. Belt & Fixed Axis',
+                title: 'Fixed-Axis Rotation & Belt Drive',
+                hint: 'Belt speed v = rₐωₐ = rᵦωᵦ is shared! Watch Point P\'s tangential & normal acceleration.',
+                goal: 'Accelerate Pulley A until Point P on Wheel B reaches a total acceleration > 25 m/s²!',
+                legend: [
+                    { color: '#38bdf8', label: 'Velocity vₚ = ωᵦ rᵦ' },
+                    { color: '#34d399', label: 'Tangential aₜ = αᵦ rᵦ' },
+                    { color: '#f43f5e', label: 'Normal aₙ = ωᵦ² rᵦ' }
+                ],
+                state: { alphaA: 2.0, rA: 0.15, rB: 0.40, omegaA: 0, thetaA: 0, thetaB: 0 },
+                controls: [
+                    { type: 'slider', key: 'alphaA', label: 'Motor Angular Accel (αₐ)', min: 0, max: 5, step: 0.2, unit: 'rad/s²' },
+                    { type: 'slider', key: 'rA', label: 'Pulley A Radius (rₐ)', min: 0.10, max: 0.25, step: 0.01, unit: 'm' },
+                    { type: 'slider', key: 'rB', label: 'Wheel B Radius (rᵦ)', min: 0.25, max: 0.55, step: 0.01, unit: 'm' }
+                ]
+            },
+            {
+                id: 'relativeIC',
+                shortTitle: '4. Relative Vel & IC',
+                title: 'Relative Velocity & Instantaneous Center',
+                hint: 'Draw perpendiculars to vₐ and vᵦ — their intersection is the Instantaneous Center (IC)!',
+                goal: 'Set link angle θ = 45° and verify that |vᵦ| equals |vₐ| (2.0 m/s) while rotating about IC!',
+                legend: [
+                    { color: '#38bdf8', label: 'vₐ (Downward Slot)' },
+                    { color: '#34d399', label: 'vᵦ (Horizontal Slot)' },
+                    { color: '#f43f5e', label: 'Instantaneous Center (IC)' },
+                    { color: '#c084fc', label: 'Point C Velocity (v꜀ = ω r꜀/ᵢ꜀)' }
+                ],
+                state: { thetaDeg: 45, vA: 2.0, autoSweep: false },
+                controls: [
+                    { type: 'slider', key: 'thetaDeg', label: 'Link Angle (θ)', min: 15, max: 75, step: 1, unit: '°' },
+                    { type: 'slider', key: 'vA', label: 'Slider A Speed (vₐ)', min: 0.5, max: 4.0, step: 0.1, unit: 'm/s' },
+                    { type: 'toggle', key: 'autoSweep', label: 'Animate Link Motion' }
+                ]
+            },
+            {
+                id: 'inertia',
+                shortTitle: '5. Moment of Inertia',
+                title: 'Mass Moment of Inertia & Parallel Axis',
+                hint: 'Move the pivot axis away from Center of Mass G to see Iₚ = I₉ + m d² surge!',
+                goal: 'Increase pivot offset d until Iₚ is at least 3× larger than centroidal I₉!',
+                legend: [
+                    { color: '#38bdf8', label: 'Center of Mass (G)' },
+                    { color: '#f43f5e', label: 'Rotation Axis (P)' },
+                    { color: '#fbbf24', label: 'Radius of Gyration (k = √(I/m))' }
+                ],
+                state: { shape: 'rod', mass: 10, size: 1.2, offsetD: 0.4, torque: 12, omega: 0, angle: 0 },
+                controls: [
+                    {
+                        type: 'select', key: 'shape', label: 'Rigid Body Geometry',
+                        options: [
+                            { value: 'rod', label: 'Slender Rod (I₉ = 1/12 mL²)' },
+                            { value: 'disk', label: 'Solid Cylinder/Disk (I₉ = 1/2 mR²)' },
+                            { value: 'tpole', label: 'T-Pendulum (2 Rods, Ex 17.4)' }
+                        ]
+                    },
+                    { type: 'slider', key: 'mass', label: 'Total Mass (m)', min: 2, max: 30, step: 1, unit: 'kg' },
+                    { type: 'slider', key: 'offsetD', label: 'Parallel Axis Offset (d)', min: 0, max: 1.0, step: 0.05, unit: 'm' },
+                    { type: 'slider', key: 'torque', label: 'Applied Torque (M)', min: 0, max: 30, step: 1, unit: 'N·m' }
+                ]
+            },
+            {
+                id: 'kinetics',
+                shortTitle: '6. Kinetics (Slide vs Tip)',
+                title: 'Planar Kinetics: Slide vs. Tip',
+                hint: 'Push a 50-kg crate! When normal force offset x exceeds 0.5 m (half-width), the crate tips!',
+                goal: 'Push the crate high enough or hard enough so normal offset x > 0.50 m and trigger TIPPING!',
+                legend: [
+                    { color: '#38bdf8', label: 'Applied Force (P)' },
+                    { color: '#34d399', label: 'Normal Force (N꜀) at offset x' },
+                    { color: '#f43f5e', label: 'Friction (F = μₖ N꜀)' }
+                ],
+                state: { forceP: 600, heightH: 0.8, muK: 0.2, crateX: 0, tipAngle: 0, velX: 0, omegaTip: 0 },
+                controls: [
+                    { type: 'slider', key: 'forceP', label: 'Push Force (P)', min: 100, max: 1000, step: 20, unit: 'N' },
+                    { type: 'slider', key: 'heightH', label: 'Force Height (h)', min: 0.2, max: 1.4, step: 0.05, unit: 'm' },
+                    { type: 'slider', key: 'muK', label: 'Friction Coeff (μₖ)', min: 0.05, max: 0.6, step: 0.05, unit: '' }
+                ]
+            },
+            {
+                id: 'workEnergy',
+                shortTitle: '7. Work & Energy',
+                title: 'Work-Energy & Rolling Without Slipping',
+                hint: 'A wheel rolls without slipping (v₉ = ωR) against a top-attached spring (Δs = 2x₉)!',
+                goal: 'Apply couple moment M = 25 N·m and watch kinetic energy peak before the spring pulls it back!',
+                legend: [
+                    { color: '#38bdf8', label: 'Translational KE (½mv₉²)' },
+                    { color: '#c084fc', label: 'Rotational KE (½I₉ω²)' },
+                    { color: '#f43f5e', label: 'Spring Elastic PE (½ks²)' }
+                ],
+                state: { coupleM: 20, springK: 15, xG: 0, vG: 0 },
+                controls: [
+                    { type: 'slider', key: 'coupleM', label: 'Couple Moment (M)', min: 0, max: 40, step: 1, unit: 'N·m' },
+                    { type: 'slider', key: 'springK', label: 'Spring Stiffness (k)', min: 5, max: 40, step: 1, unit: 'N/m' }
+                ]
+            }
+        ];
+
+        let currentModIndex = 0;
+        let canvas, ctx, width, height, dpr;
+        let lastTime = performance.now();
+
+        // Initialize UI & Canvas
+        window.onload = function() {
+            canvas = document.getElementById('simCanvas');
+            ctx = canvas.getContext('2d');
+            
+            renderTabs();
+            loadModule(0);
+            
+            window.addEventListener('resize', resizeCanvas);
+            document.getElementById('reset-btn').addEventListener('click', () => resetCurrentModule());
+            
+            resizeCanvas();
+            requestAnimationFrame(loop);
+        };
+
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            dpr = window.devicePixelRatio || 1;
+            width = rect.width;
+            height = rect.height;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        function renderTabs() {
+            const nav = document.getElementById('nav-tabs');
+            nav.innerHTML = MODULES.map((m, idx) => `
+                <button onclick="loadModule(${idx})" id="tab-${idx}"
+                    class="whitespace-nowrap px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 ${
+                        idx === currentModIndex 
+                        ? 'bg-sky-500 text-slate-950 shadow-lg shadow-sky-500/25' 
+                        : 'bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
+                    }">
+                    ${m.shortTitle}
+                </button>
+            `).join('');
+        }
+
+        function loadModule(idx) {
+            currentModIndex = idx;
+            renderTabs();
+            const mod = MODULES[idx];
+            
+            document.getElementById('module-title').textContent = mod.title;
+            document.getElementById('hint-text').textContent = mod.hint;
+            document.getElementById('goal-prompt').textContent = mod.goal;
+
+            // Legend
+            document.getElementById('vector-legend').innerHTML = mod.legend.map(item => `
+                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950/75 backdrop-blur border border-slate-800 text-[11px] font-medium text-slate-200">
+                    <span class="w-2.5 h-2.5 rounded-full" style="background:${item.color}"></span>
+                    ${item.label}
+                </div>
+            `).join('');
+
+            // Controls
+            const container = document.getElementById('controls-container');
+            container.innerHTML = mod.controls.map(ctrl => {
+                if (ctrl.type === 'slider') {
+                    return `
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between text-xs font-medium">
+                                <span class="text-slate-300">${ctrl.label}</span>
+                                <span class="mono text-sky-400 font-bold" id="val-${ctrl.key}">${mod.state[ctrl.key]} ${ctrl.unit}</span>
+                            </div>
+                            <input type="range" min="${ctrl.min}" max="${ctrl.max}" step="${ctrl.step}" value="${mod.state[ctrl.key]}"
+                                oninput="updateState('${ctrl.key}', parseFloat(this.value), '${ctrl.unit}')" class="w-full">
+                        </div>
+                    `;
+                } else if (ctrl.type === 'select') {
+                    return `
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-medium text-slate-300">${ctrl.label}</label>
+                            <select onchange="updateState('${ctrl.key}', this.value)"
+                                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-sky-500">
+                                ${ctrl.options.map(o => `<option value="${o.value}" ${mod.state[ctrl.key] === o.value ? 'selected' : ''}>${o.label}</option>`).join('')}
+                            </select>
+                        </div>
+                    `;
+                } else if (ctrl.type === 'toggle') {
+                    return `
+                        <label class="flex items-center justify-between pt-1 cursor-pointer">
+                            <span class="text-xs font-medium text-slate-300">${ctrl.label}</span>
+                            <input type="checkbox" ${mod.state[ctrl.key] ? 'checked' : ''}
+                                onchange="updateState('${ctrl.key}', this.checked)"
+                                class="w-4 h-4 accent-sky-400 rounded cursor-pointer">
+                        </label>
+                    `;
+                }
+            }).join('');
+        }
+
+        function updateState(key, val, unit = '') {
+            const mod = MODULES[currentModIndex];
+            mod.state[key] = val;
+            const labelEl = document.getElementById(`val-${key}`);
+            if (labelEl) labelEl.textContent = `${val} ${unit}`;
+
+            // Specific resets when parameters change in dynamic demos
+            if (mod.id === 'kinetics') {
+                mod.state.crateX = 0;
+                mod.state.tipAngle = 0;
+                mod.state.velX = 0;
+                mod.state.omegaTip = 0;
+            }
+            if (mod.id === 'workEnergy') {
+                mod.state.xG = 0;
+                mod.state.vG = 0;
+            }
+        }
+
+        function resetCurrentModule() {
+            const mod = MODULES[currentModIndex];
+            if (mod.id === 'curvilinear') { mod.state.s = 0.1; mod.state.speed = 4.5; mod.state.at = 1.5; mod.state.curveAmp = 90; mod.state.paused = false; }
+            if (mod.id === 'motionTypes') { mod.state.t = 0; mod.state.speed = 1.2; }
+            if (mod.id === 'fixedRotation') { mod.state.omegaA = 0; mod.state.thetaA = 0; mod.state.thetaB = 0; }
+            if (mod.id === 'relativeIC') { mod.state.thetaDeg = 45; mod.state.vA = 2.0; mod.state.autoSweep = false; }
+            if (mod.id === 'inertia') { mod.state.omega = 0; mod.state.angle = 0; mod.state.offsetD = 0.4; }
+            if (mod.id === 'kinetics') { mod.state.crateX = 0; mod.state.tipAngle = 0; mod.state.velX = 0; mod.state.omegaTip = 0; }
+            if (mod.id === 'workEnergy') { mod.state.xG = 0; mod.state.vG = 0; }
+            loadModule(currentModIndex);
+        }
+
+        // Helper: Draw Crisp Vector Arrow
+        function drawArrow(x1, y1, x2, y2, color, label = '', lineWidth = 2.5) {
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const len = Math.hypot(dx, dy);
+            if (len < 3) return;
+            const angle = Math.atan2(dy, dx);
+            const headLen = Math.min(11, len * 0.35);
+
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = lineWidth;
+            ctx.lineCap = 'round';
+
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI / 6), y2 - headLen * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(x2 - headLen * Math.cos(angle + Math.PI / 6), y2 - headLen * Math.sin(angle + Math.PI / 6));
+            ctx.closePath();
+            ctx.fill();
+
+            if (label) {
+                ctx.font = 'bold 12px "JetBrains Mono", monospace';
+                ctx.fillText(label, x2 + 8 * Math.cos(angle), y2 + 8 * Math.sin(angle));
+            }
+            ctx.restore();
+        }
+
+        // Helper: Draw Background Grid
+        function drawGrid() {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.06)';
+            ctx.lineWidth = 1;
+            const step = 40;
+            for (let x = 0; x < width; x += step) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+            }
+            for (let y = 0; y < height; y += step) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        function updateTelemetry(cards, progressPct) {
+            const container = document.getElementById('telemetry-cards');
+            container.innerHTML = cards.map(c => `
+                <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5">
+                    <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">${c.label}</div>
+                    <div class="mono text-base sm:text-lg font-bold text-white mt-0.5">${c.value}</div>
+                    <div class="mono text-[11px] text-sky-400/90 mt-1">${c.formula}</div>
+                </div>
+            `).join('');
+
+            const clamped = Math.max(0, Math.min(100, progressPct));
+            document.getElementById('goal-progress').style.width = `${clamped}%`;
+            const statusEl = document.getElementById('goal-status');
+            if (clamped >= 100) {
+                statusEl.textContent = 'Completed!';
+                statusEl.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+            } else {
+                statusEl.textContent = `${Math.round(clamped)}%`;
+                statusEl.className = 'text-xs font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400';
+            }
+        }
+
+        // Main Animation Loop
+        function loop(now) {
+            const dt = Math.min((now - lastTime) / 1000, 0.05);
+            lastTime = now;
+
+            ctx.clearRect(0, 0, width, height);
+            drawGrid();
+
+            const mod = MODULES[currentModIndex];
+            switch (mod.id) {
+                case 'curvilinear': renderCurvilinear(mod.state, dt); break;
+                case 'motionTypes': renderMotionTypes(mod.state, dt); break;
+                case 'fixedRotation': renderFixedRotation(mod.state, dt); break;
+                case 'relativeIC': renderRelativeIC(mod.state, dt); break;
+                case 'inertia': renderInertia(mod.state, dt); break;
+                case 'kinetics': renderKinetics(mod.state, dt); break;
+                case 'workEnergy': renderWorkEnergy(mod.state, dt); break;
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        // =========================================================================
+        // 1. CURVILINEAR n-t COMPONENTS
+        // =========================================================================
+        function renderCurvilinear(s, dt) {
+            const padX = 60;
+            const spanW = width - padX * 2;
+            const midY = height * 0.52;
+            const amp = s.curveAmp;
+            const freq = (Math.PI * 2) / spanW;
+
+            const pathY = (x) => midY + amp * Math.sin((x - padX) * freq);
+            const dyDx = (x) => amp * freq * Math.cos((x - padX) * freq);
+            const d2yDx2 = (x) => -amp * freq * freq * Math.sin((x - padX) * freq);
+
+            // Draw blue trajectory curve
+            ctx.save();
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            for (let x = padX; x <= width - padX; x += 4) {
+                const y = pathY(x);
+                if (x === padX) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            ctx.restore();
+
+            // Update particle progress along x
+            if (!s.paused) {
+                s.s += (s.speed * 0.05) * dt;
+                if (s.s > 1) s.s = 0;
+            }
+
+            const px = padX + s.s * spanW;
+            const py = pathY(px);
+            const slope = dyDx(px);
+            const secondDeriv = d2yDx2(px);
+
+            // Unit tangent u_t
+            const norm = Math.hypot(1, slope);
+            const utx = 1 / norm;
+            const uty = slope / norm;
+
+            // Radius of curvature rho in pixels -> scaled to meters
+            const rhoPx = Math.pow(1 + slope * slope, 1.5) / Math.max(Math.abs(secondDeriv), 0.0005);
+            const rhoMeters = Math.min(rhoPx / 45, 50);
+
+            // Unit normal u_n (points toward center of curvature O')
+            const sign = secondDeriv >= 0 ? 1 : -1;
+            const unx = -uty * sign;
+            const uny = utx * sign;
+
+            // Draw osculating circle & center O'
+            const cappedRho = Math.min(rhoPx, 170);
+            const ocx = px + unx * cappedRho;
+            const ocy = py + uny * cappedRho;
+
+            ctx.save();
+            ctx.strokeStyle = 'rgba(244, 63, 94, 0.28)';
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(ocx, ocy, cappedRho, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(px, py);
+            ctx.lineTo(ocx, ocy);
+            ctx.stroke();
+
+            ctx.fillStyle = '#f43f5e';
+            ctx.beginPath();
+            ctx.arc(ocx, ocy, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.font = 'bold 12px "JetBrains Mono", monospace';
+            ctx.fillText("O' (Center of Curvature)", ocx + 8, ocy + 4);
+            ctx.restore();
+
+            // Instantaneous speed modulated slightly by tangential accel
+            const vInst = Math.max(1, s.speed + s.at * Math.sin(s.s * Math.PI));
+            const an = (vInst * vInst) / rhoMeters;
+            const at = s.at;
+            const aTotal = Math.hypot(at, an);
+
+            // Draw Vectors
+            const vScale = 12;
+            const aScale = 6;
+            drawArrow(px, py, px + utx * vInst * vScale, py + uty * vInst * vScale, '#38bdf8', 'v');
+            drawArrow(px, py, px + utx * at * aScale * 2, py + uty * at * aScale * 2, '#34d399', 'aₜ');
+            drawArrow(px, py, px + unx * Math.min(an * aScale, 140), py + uny * Math.min(an * aScale, 140), '#f43f5e', 'aₙ');
+
+            const axVec = utx * at * aScale * 2 + unx * Math.min(an * aScale, 140);
+            const ayVec = uty * at * aScale * 2 + uny * Math.min(an * aScale, 140);
+            drawArrow(px, py, px + axVec, py + ayVec, '#fbbf24', 'a', 3);
+
+            // Draw Particle
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(px, py, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            updateTelemetry([
+                { label: 'Radius of Curvature (ρ)', value: `${rhoMeters.toFixed(2)} m`, formula: 'ρ = [1+(dy/dx)²]^(3/2) / |d²y/dx²|' },
+                { label: 'Normal Accel (aₙ)', value: `${an.toFixed(2)} m/s²`, formula: 'aₙ = v² / ρ (always inward)' },
+                { label: 'Total Acceleration |a|', value: `${aTotal.toFixed(2)} m/s²`, formula: 'a = aₜ uₜ + aₙ uₙ' }
+            ], (an / 15) * 100);
+        }
+
+        // =========================================================================
+        // 2. PLANAR MOTION CLASSIFICATION
+        // =========================================================================
+        function renderMotionTypes(s, dt) {
+            s.t += dt * s.speed;
+            const cx = width * 0.5;
+            const cy = height * 0.5;
+            const len = 110;
+
+            let ax, ay, bx, by, theta = 0;
+
+            if (s.mode === 'rectilinear') {
+                const offset = Math.sin(s.t * 1.5) * (width * 0.26);
+                ax = cx + offset;
+                ay = cy - len / 2;
+                bx = ax;
+                by = cy + len / 2;
+                theta = 0;
+            } else if (s.mode === 'curvilinear') {
+                const ang = s.t * 1.5;
+                const rad = 75;
+                ax = cx + Math.cos(ang) * rad;
+                ay = cy - 45 + Math.sin(ang) * rad;
+                bx = ax;
+                by = ay + len;
+                theta = 0;
+            } else if (s.mode === 'rotation') {
+                theta = s.t * 1.6;
+                ax = cx;
+                ay = cy;
+                bx = ax + Math.cos(theta) * len;
+                by = ay + Math.sin(theta) * len;
+            } else {
+                // General plane motion: rolling & translating link
+                const offset = Math.sin(s.t * 1.2) * (width * 0.24);
+                theta = s.t * 2.2;
+                const gx = cx + offset;
+                const gy = cy;
+                ax = gx - Math.cos(theta) * (len / 2);
+                ay = gy - Math.sin(theta) * (len / 2);
+                bx = gx + Math.cos(theta) * (len / 2);
+                by = gy + Math.sin(theta) * (len / 2);
+            }
+
+            // Draw faint trajectory hints
+            ctx.save();
+            ctx.setLineDash([5, 5]);
+            ctx.lineWidth = 2;
+            if (s.mode === 'rectilinear') {
+                ctx.strokeStyle = 'rgba(56,189,248,0.4)';
+                ctx.beginPath(); ctx.moveTo(cx - width*0.26, cy - len/2); ctx.lineTo(cx + width*0.26, cy - len/2); ctx.stroke();
+                ctx.strokeStyle = 'rgba(244,114,182,0.4)';
+                ctx.beginPath(); ctx.moveTo(cx - width*0.26, cy + len/2); ctx.lineTo(cx + width*0.26, cy + len/2); ctx.stroke();
+            } else if (s.mode === 'curvilinear') {
+                ctx.strokeStyle = 'rgba(56,189,248,0.4)';
+                ctx.beginPath(); ctx.arc(cx, cy - 45, 75, 0, Math.PI*2); ctx.stroke();
+                ctx.strokeStyle = 'rgba(244,114,182,0.4)';
+                ctx.beginPath(); ctx.arc(cx, cy - 45 + len, 75, 0, Math.PI*2); ctx.stroke();
+            } else if (s.mode === 'rotation') {
+                ctx.strokeStyle = 'rgba(244,114,182,0.4)';
+                ctx.beginPath(); ctx.arc(cx, cy, len, 0, Math.PI*2); ctx.stroke();
+            }
+            ctx.restore();
+
+            // Rigid Body Blob
+            const midX = (ax + bx) / 2;
+            const midY = (ay + by) / 2;
+            ctx.save();
+            ctx.translate(midX, midY);
+            ctx.rotate(Math.atan2(by - ay, bx - ax));
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.14)';
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.roundRect(-len * 0.72, -38, len * 1.44, 76, 36);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+
+            // Orientation Line AB
+            ctx.strokeStyle = '#facc15';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(ax, ay);
+            ctx.lineTo(bx, by);
+            ctx.stroke();
+
+            // Points A and B
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath(); ctx.arc(ax, ay, 6, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#f472b6';
+            ctx.beginPath(); ctx.arc(bx, by, 6, 0, Math.PI*2); ctx.fill();
+
+            ctx.font = 'bold 13px "JetBrains Mono", monospace';
+            ctx.fillStyle = '#fff';
+            ctx.fillText('A', ax - 18, ay - 6);
+            ctx.fillText('B', bx + 10, by + 6);
+
+            const isPureTrans = (s.mode === 'rectilinear' || s.mode === 'curvilinear');
+            updateTelemetry([
+                { label: 'Angular Velocity (ω)', value: isPureTrans ? '0.00 rad/s' : `${(s.speed * 1.8).toFixed(2)} rad/s`, formula: isPureTrans ? 'Line AB stays parallel!' : 'Line AB changes angle θ' },
+                { label: 'Velocity Relation', value: isPureTrans ? 'vᵦ = vₐ' : 'vᵦ = vₐ + ω × rᵦ/ₐ', formula: isPureTrans ? 'All points have identical v' : 'Translation + Rotation' },
+                { label: 'Active Classification', value: s.mode.toUpperCase(), formula: 'Rigid Body Planar Kinematics' }
+            ], s.mode === 'general' ? 100 : 35);
+        }
+
+        // =========================================================================
+        // 3. FIXED-AXIS ROTATION & BELT DRIVE (Example 16.2)
+        // =========================================================================
+        function renderFixedRotation(s, dt) {
+            s.omegaA += s.alphaA * dt;
+            if (s.omegaA > 14) s.omegaA = 2; // Loop smoothly
+            s.thetaA += s.omegaA * dt;
+
+            // Belt non-slip condition: v_belt = rA * omegaA = rB * omegaB
+            const vBelt = s.rA * s.omegaA;
+            const omegaB = vBelt / s.rB;
+            const alphaB = (s.rA * s.alphaA) / s.rB;
+            s.thetaB += omegaB * dt;
+
+            const scale = 270;
+            const rAPx = s.rA * scale;
+            const rBPx = s.rB * scale;
+
+            const ax = width * 0.30;
+            const ay = height * 0.48;
+            const bx = width * 0.68;
+            const by = height * 0.50;
+
+            // Draw Tangent Belt Lines
+            ctx.save();
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(ax, ay - rAPx);
+            ctx.lineTo(bx, by - rBPx);
+            ctx.moveTo(ax, ay + rAPx);
+            ctx.lineTo(bx, by + rBPx);
+            ctx.stroke();
+            ctx.restore();
+
+            // Draw Pulley A
+            drawWheel(ax, ay, rAPx, s.thetaA, '#f59e0b', 'A');
+            // Draw Wheel B
+            drawWheel(bx, by, rBPx, s.thetaB, '#38bdf8', 'B');
+
+            // Point P on Wheel B rim
+            const px = bx + Math.cos(s.thetaB) * rBPx;
+            const py = by + Math.sin(s.thetaB) * rBPx;
+
+            // Tangent & Normal unit vectors at P (clockwise rotation)
+            const utx = -Math.sin(s.thetaB);
+            const uty = Math.cos(s.thetaB);
+            const unx = -Math.cos(s.thetaB);
+            const uny = -Math.sin(s.thetaB);
+
+            const vP = omegaB * s.rB;
+            const atP = alphaB * s.rB;
+            const anP = omegaB * omegaB * s.rB;
+            const aTotal = Math.hypot(atP, anP);
+
+            drawArrow(px, py, px + utx * vP * 25, py + uty * vP * 25, '#38bdf8', 'vₚ');
+            drawArrow(px, py, px + utx * atP * 40, py + uty * atP * 40, '#34d399', 'aₜ');
+            drawArrow(px, py, px + unx * Math.min(anP * 6, 110), py + uny * Math.min(anP * 6, 110), '#f43f5e', 'aₙ');
+
+            ctx.fillStyle = '#fff';
+            ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI * 2); ctx.fill();
+            ctx.fillText('P', px + 10, py);
+
+            updateTelemetry([
+                { label: 'Wheel B Angular Vel (ωᵦ)', value: `${omegaB.toFixed(2)} rad/s`, formula: 'ωᵦ = (rₐ / rᵦ) ωₐ' },
+                { label: 'Point P Tangential (aₜ)', value: `${atP.toFixed(2)} m/s²`, formula: 'aₜ = αᵦ rᵦ' },
+                { label: 'Point P Total Accel (aₚ)', value: `${aTotal.toFixed(2)} m/s²`, formula: 'aₚ = √(aₜ² + (ωᵦ²rᵦ)²)' }
+            ], (aTotal / 25) * 100);
+        }
+
+        function drawWheel(x, y, r, angle, color, label) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+            ctx.fillStyle = 'rgba(30, 41, 59, 0.85)';
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(0, 0, r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Spokes
+            for (let i = 0; i < 4; i++) {
+                const a = (i * Math.PI) / 2;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+                ctx.stroke();
+            }
+            ctx.restore();
+
+            ctx.fillStyle = '#fff';
+            ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
+            ctx.font = 'bold 13px "JetBrains Mono", monospace';
+            ctx.fillText(label, x - 20, y - r - 8);
+        }
+
+        // =========================================================================
+        // 4. RELATIVE VELOCITY & INSTANTANEOUS CENTER (Example 16.6)
+        // =========================================================================
+        function renderRelativeIC(s, dt) {
+            if (s.autoSweep) {
+                s.thetaDeg += 22 * dt;
+                if (s.thetaDeg > 75) s.thetaDeg = 18;
+                const slider = document.querySelector('input[type="range"]');
+                if (slider) slider.value = Math.round(s.thetaDeg);
+                const lbl = document.getElementById('val-thetaDeg');
+                if (lbl) lbl.textContent = `${Math.round(s.thetaDeg)} °`;
+            }
+
+            const theta = (s.thetaDeg * Math.PI) / 180;
+            const originX = width * 0.25;
+            const originY = height * 0.72;
+            const linkAB = 210; // represents 0.2 m
+            const linkBC = 85;  // represents 0.1 m extension
+
+            // A moves vertically along x = originX
+            const ax = originX;
+            const ay = originY - linkAB * Math.cos(theta);
+            // B moves horizontally along y = originY
+            const bx = originX + linkAB * Math.sin(theta);
+            const by = originY;
+            // C extends past B
+            const cx = bx + linkBC * Math.sin(theta);
+            const cy = by + linkBC * Math.cos(theta);
+
+            // Instantaneous Center (IC): perpendicular to vA (horizontal from A) & perpendicular to vB (vertical from B)
+            const icX = bx;
+            const icY = ay;
+
+            // Kinematics (L = 0.2m): vA = omega * (L sin theta) => omega = vA / (0.2 sin theta)
+            const L = 0.2;
+            const omega = s.vA / (L * Math.sin(theta));
+            const vB = omega * (L * Math.cos(theta));
+            const rCIC = Math.hypot((cx - icX) / linkAB * L, (cy - icY) / linkAB * L);
+            const vC = omega * rCIC;
+
+            // Draw Vertical & Horizontal Slots
+            ctx.save();
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 14;
+            ctx.lineCap = 'round';
+            ctx.beginPath(); ctx.moveTo(originX, originY - 240); ctx.lineTo(originX, originY); ctx.lineTo(originX + 280, originY); ctx.stroke();
+            ctx.restore();
+
+            // Draw Dashed IC Construction Lines
+            ctx.save();
+            ctx.strokeStyle = 'rgba(244, 63, 94, 0.55)';
+            ctx.setLineDash([5, 5]);
+            ctx.lineWidth = 1.8;
+            ctx.beginPath();
+            ctx.moveTo(ax, ay); ctx.lineTo(icX, icY);
+            ctx.moveTo(bx, by); ctx.lineTo(icX, icY);
+            ctx.moveTo(cx, cy); ctx.lineTo(icX, icY);
+            ctx.stroke();
+            ctx.restore();
+
+            // Draw Rigid Link ABC
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 8;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(ax, ay);
+            ctx.lineTo(cx, cy);
+            ctx.stroke();
+
+            // Sliders A and B
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(ax - 12, ay - 16, 24, 32);
+            ctx.fillStyle = '#34d399';
+            ctx.fillRect(bx - 16, by - 12, 32, 24);
+
+            // IC Marker
+            ctx.fillStyle = '#f43f5e';
+            ctx.beginPath(); ctx.arc(icX, icY, 7, 0, Math.PI * 2); ctx.fill();
+            ctx.font = 'bold 12px "JetBrains Mono", monospace';
+            ctx.fillText('IC (Zero Vel)', icX + 10, icY - 6);
+
+            // Velocity Vectors
+            const vScale = 28;
+            drawArrow(ax, ay, ax, ay + s.vA * vScale, '#38bdf8', `vₐ`);
+            drawArrow(bx, by, bx + Math.min(vB * vScale, 150), by, '#34d399', `vᵦ`);
+
+            // vC perpendicular to r_C/IC
+            const dxIC = cx - icX;
+            const dyIC = cy - icY;
+            const distIC = Math.hypot(dxIC, dyIC);
+            // Counterclockwise rotation: (-dy, dx)
+            const vCDirX = dyIC / distIC;
+            const vCDirY = -dxIC / distIC;
+            drawArrow(cx, cy, cx + vCDirX * Math.min(vC * vScale, 130), cy + vCDirY * Math.min(vC * vScale, 130), '#c084fc', 'v꜀');
+
+            // Labels A, B, C
+            ctx.fillStyle = '#fff';
+            ctx.fillText('A', ax - 24, ay);
+            ctx.fillText('B', bx, by + 26);
+            ctx.fillText('C', cx + 10, cy + 12);
+
+            const match45 = Math.abs(s.thetaDeg - 45) <= 1;
+            updateTelemetry([
+                { label: 'Angular Velocity (ω)', value: `${omega.toFixed(2)} rad/s`, formula: 'ω = vₐ / rₐ/ᵢ꜀' },
+                { label: 'Slider B Velocity (vᵦ)', value: `${vB.toFixed(2)} m/s`, formula: 'vᵦ = ω · rᵦ/ᵢ꜀ = vₐ cot(θ)' },
+                { label: 'End Point C Speed (v꜀)', value: `${vC.toFixed(2)} m/s`, formula: 'v꜀ = ω · r꜀/ᵢ꜀' }
+            ], match45 ? 100 : Math.max(0, 100 - Math.abs(s.thetaDeg - 45) * 3));
+        }
+
+        // =========================================================================
+        // 5. MASS MOMENT OF INERTIA & PARALLEL AXIS THEOREM
+        // =========================================================================
+        function renderInertia(s, dt) {
+            const L = s.size;
+            let Ig = 0;
+            if (s.shape === 'rod') Ig = (1 / 12) * s.mass * L * L;
+            else if (s.shape === 'disk') Ig = 0.5 * s.mass * (L * 0.5) * (L * 0.5);
+            else Ig = (1 / 12) * (s.mass * 0.5) * L * L + (1 / 12) * (s.mass * 0.5) * L * L + 0.25 * s.mass * 0.25;
+
+            const Ip = Ig + s.mass * s.offsetD * s.offsetD;
+            const k = Math.sqrt(Ip / s.mass);
+            const alpha = s.torque / Ip;
+
+            s.omega += alpha * dt;
+            if (s.omega > 12) s.omega = 0;
+            s.angle += s.omega * dt;
+
+            const cx = width * 0.5;
+            const cy = height * 0.5;
+            const scale = 150;
+            const dPx = s.offsetD * scale;
+
+            ctx.save();
+            ctx.translate(cx, cy);
+
+            // Radius of gyration ring around Pivot P
+            ctx.strokeStyle = 'rgba(251, 191, 36, 0.45)';
+            ctx.setLineDash([6, 4]);
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, 0, k * scale, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Rotate body around Pivot P (at origin 0,0)
+            ctx.save();
+            ctx.rotate(s.angle);
+            // Offset Center of Mass G by dPx
+            ctx.translate(dPx, 0);
+
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.18)';
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 3;
+
+            if (s.shape === 'rod') {
+                const wPx = L * scale;
+                ctx.beginPath();
+                ctx.roundRect(-wPx / 2, -14, wPx, 28, 8);
+                ctx.fill(); ctx.stroke();
+            } else if (s.shape === 'disk') {
+                const rPx = (L * 0.5) * scale;
+                ctx.beginPath();
+                ctx.arc(0, 0, rPx, 0, Math.PI * 2);
+                ctx.fill(); ctx.stroke();
+            } else {
+                // T-pendulum
+                const wPx = L * scale;
+                ctx.beginPath();
+                ctx.roundRect(-wPx / 2, -10, wPx, 20, 6);
+                ctx.roundRect(wPx / 2 - 20, -wPx * 0.45, 20, wPx * 0.9, 6);
+                ctx.fill(); ctx.stroke();
+            }
+
+            // Center of Mass G Marker
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI * 2); ctx.fill();
+            ctx.font = 'bold 12px "JetBrains Mono", monospace';
+            ctx.fillText('G', 8, -8);
+            ctx.restore();
+
+            // Pivot P Marker (Fixed at center)
+            ctx.fillStyle = '#f43f5e';
+            ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.fillText('P (Pivot)', -28, -14);
+            ctx.fillStyle = '#fbbf24';
+            ctx.fillText(`k = ${k.toFixed(2)}m`, k * scale + 6, 0);
+
+            ctx.restore();
+
+            const ratio = Ip / Ig;
+            updateTelemetry([
+                { label: 'Centroidal Inertia (I₉)', value: `${Ig.toFixed(2)} kg·m²`, formula: 'About Mass Center G' },
+                { label: 'Parallel Axis Inertia (Iₚ)', value: `${Ip.toFixed(2)} kg·m²`, formula: 'Iₚ = I₉ + m d²' },
+                { label: 'Angular Accel (α = M/Iₚ)', value: `${alpha.toFixed(2)} rad/s²`, formula: `Radius of Gyration k = ${k.toFixed(2)} m` }
+            ], ((ratio - 1) / 2) * 100);
+        }
+
+        // =========================================================================
+        // 6. KINETICS: SLIDE VS. TIP (Example 17.7)
+        // =========================================================================
+        function renderKinetics(s, dt) {
+            const mass = 50; // kg
+            const g = 9.81;
+            const W = mass * g; // 490.5 N
+            const halfW = 0.5;  // 0.5 m half-width
+            const halfH = 0.5;  // 0.5 m half-height
+
+            // Equations of motion assuming sliding:
+            // Sum Fy = 0 => Nc = W
+            // Sum Fx = m aG => P - muK * Nc = m aG
+            // Sum MG = 0 => -P * (h - 0.5) + Nc * x - F * 0.5 = 0
+            const Nc = W;
+            const F = s.muK * Nc;
+            const aG = Math.max(0, (s.forceP - F) / mass);
+            const armAboveG = s.heightH - halfH;
+            const xOffset = (s.forceP * armAboveG + F * halfH) / Nc;
+            const isTipping = xOffset > halfW;
+
+            if (isTipping) {
+                const alphaTip = ((s.forceP * s.heightH - W * halfW) / (mass * 0.6));
+                s.omegaTip += Math.max(1.5, alphaTip) * dt;
+                s.tipAngle = Math.min(Math.PI / 2, s.tipAngle + s.omegaTip * dt);
+            } else {
+                s.velX += aG * dt;
+                s.crateX += s.velX * 25 * dt;
+                if (s.crateX > width * 0.45) { s.crateX = -width * 0.25; s.velX = 0; }
+            }
+
+            const floorY = height * 0.76;
+            const boxSize = 130; // represents 1m x 1m
+            const baseX = width * 0.35 + s.crateX;
+
+            // Floor
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 4;
+            ctx.beginPath(); ctx.moveTo(30, floorY); ctx.lineTo(width - 30, floorY); ctx.stroke();
+
+            ctx.save();
+            // Pivot around front-right corner A if tipping
+            ctx.translate(baseX + boxSize / 2, floorY);
+            ctx.rotate(s.tipAngle);
+            ctx.translate(-boxSize / 2, -boxSize);
+
+            // Crate Body
+            ctx.fillStyle = isTipping ? 'rgba(244, 63, 94, 0.2)' : 'rgba(56, 189, 248, 0.16)';
+            ctx.strokeStyle = isTipping ? '#f43f5e' : '#38bdf8';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.roundRect(0, 0, boxSize, boxSize, 8);
+            ctx.fill(); ctx.stroke();
+
+            // Center of Gravity G
+            ctx.fillStyle = '#fff';
+            ctx.beginPath(); ctx.arc(boxSize / 2, boxSize / 2, 5, 0, Math.PI * 2); ctx.fill();
+            ctx.font = 'bold 12px "JetBrains Mono", monospace';
+            ctx.fillText('G', boxSize / 2 + 8, boxSize / 2 - 6);
+
+            // Applied Force P at height h
+            const py = boxSize - (s.heightH * boxSize);
+            drawArrow(-70, py, 0, py, '#38bdf8', `P=${s.forceP}N`);
+
+            // Normal Force Nc at clamped xOffset
+            const clampedX = Math.min(xOffset, halfW);
+            const nx = boxSize / 2 + (clampedX / halfW) * (boxSize / 2);
+            drawArrow(nx, boxSize + 55, nx, boxSize, '#34d399', `N꜀`);
+
+            // Friction Force F
+            drawArrow(boxSize * 0.7, boxSize, boxSize * 0.2, boxSize, '#f43f5e', `F`);
+
+            ctx.restore();
+
+            updateTelemetry([
+                { label: 'Regime Status', value: isTipping ? 'TIPPING OVER!' : 'SLIDING SMOOTHLY', formula: isTipping ? 'x > 0.50 m (Corner Pivot)' : '0 ≤ x ≤ 0.50 m' },
+                { label: 'Normal Offset (x)', value: `${xOffset.toFixed(3)} m`, formula: 'ΣM₉ = 0 ⇒ x = [P(h-0.5)+0.5F]/N꜀' },
+                { label: 'Linear Accel (a₉)', value: isTipping ? 'Rotating' : `${aG.toFixed(2)} m/s²`, formula: 'ΣFₓ = m a₉' }
+            ], isTipping ? 100 : (xOffset / halfW) * 90);
+        }
+
+        // =========================================================================
+        // 7. WORK & ENERGY: ROLLING WHEEL WITH SPRING (Example 18.3)
+        // =========================================================================
+        function renderWorkEnergy(s, dt) {
+            const mass = 20; // kg
+            const R = 0.5;   // m
+            const kG = 0.35; // m
+            const IG = mass * kG * kG;
+            // Effective mass for rolling without slipping: T = 1/2 m vG^2 + 1/2 IG (vG/R)^2 = 1/2 m_eff vG^2
+            const mEff = mass + IG / (R * R);
+
+            // Top point A moves twice as fast as G: s_spring = 2 * xG
+            // Work-Energy: U_M + U_spring = T2
+            // M * (xG / R) - 1/2 k (2 xG)^2 = 1/2 mEff vG^2
+            // Differentiating gives equation of motion: mEff * aG = (M / R) - 4 * k * xG
+            const aG = (s.coupleM / R - 4 * s.springK * s.xG) / mEff;
+            s.vG += aG * dt;
+            s.xG += s.vG * dt;
+
+            const omega = s.vG / R;
+            const theta = s.xG / R;
+            const keTrans = 0.5 * mass * s.vG * s.vG;
+            const keRot = 0.5 * IG * omega * omega;
+            const peSpring = 0.5 * s.springK * Math.pow(2 * s.xG, 2);
+
+            const floorY = height * 0.72;
+            const rPx = 85;
+            const baseWheelX = width * 0.42;
+            const wheelX = Math.max(150, Math.min(width - 130, baseWheelX + s.xG * 140));
+            const wheelY = floorY - rPx;
+
+            // Ground
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 4;
+            ctx.beginPath(); ctx.moveTo(30, floorY); ctx.lineTo(width - 30, floorY); ctx.stroke();
+
+            // Wall & Zig-Zag Spring attached to top point A
+            const wallX = 50;
+            const topY = wheelY - rPx;
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(wallX - 12, topY - 40, 12, 160);
+
+            ctx.strokeStyle = '#f43f5e';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(wallX, topY);
+            const coils = 14;
+            const springLen = wheelX - wallX;
+            for (let i = 1; i < coils; i++) {
+                const sx = wallX + (springLen * i) / coils;
+                const sy = topY + (i % 2 === 0 ? -10 : 10);
+                ctx.lineTo(sx, sy);
+            }
+            ctx.lineTo(wheelX, topY);
+            ctx.stroke();
+
+            // Rolling Wheel
+            drawWheel(wheelX, wheelY, rPx, theta, '#38bdf8', 'G');
+
+            // Instantaneous Center at bottom contact
+            ctx.fillStyle = '#34d399';
+            ctx.beginPath(); ctx.arc(wheelX, floorY, 6, 0, Math.PI * 2); ctx.fill();
+            ctx.font = 'bold 12px "JetBrains Mono", monospace';
+            ctx.fillText('IC', wheelX - 8, floorY + 20);
+
+            // Couple Moment Arc
+            if (s.coupleM > 0) {
+                ctx.strokeStyle = '#c084fc';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(wheelX, wheelY, rPx * 0.55, -Math.PI * 0.7, Math.PI * 0.2);
+                ctx.stroke();
+            }
+
+            updateTelemetry([
+                { label: 'Translational KE', value: `${keTrans.toFixed(1)} J`, formula: 'T_trans = ½ m v₉²' },
+                { label: 'Rotational KE', value: `${keRot.toFixed(1)} J`, formula: 'T_rot = ½ I₉ ω² (ω = v₉/R)' },
+                { label: 'Spring Elastic PE', value: `${peSpring.toFixed(1)} J`, formula: 'Uₛ = -½ k (2x₉)²' }
+            ], Math.min(100, ((keTrans + keRot) / 18) * 100));
+        }
+    </script>
+</body>
+</html>
